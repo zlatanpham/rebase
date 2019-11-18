@@ -70,7 +70,13 @@ git fetch origin $HEAD_BRANCH
 
 # do the rebase
 git checkout -b $HEAD_BRANCH origin/$HEAD_BRANCH
-git rebase origin/$BASE_BRANCH
+
+# Do an exact check instead of `rebase *` so it's not possible to inject malisios commands
+if [[ $(jq -r ".comment.body" "$GITHUB_EVENT_PATH" | grep -Fq "/rebase --autosquash") -eq 0 ]]; then
+	git rebase --autosquash origin/$BASE_BRANCH
+else
+  git rebase origin/$BASE_BRANCH
+fi
 
 # push back
 git push --force-with-lease
