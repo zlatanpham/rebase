@@ -2,9 +2,6 @@
 
 set -e
 
-PR_NUMBER=$(jq -r ".issue.number" "$GITHUB_EVENT_PATH")
-echo "Collecting information about PR #$PR_NUMBER of $GITHUB_REPOSITORY..."
-
 if [[ -z "$GITHUB_TOKEN" ]]; then
 	echo "Set the GITHUB_TOKEN env variable."
 	exit 1
@@ -14,11 +11,8 @@ URI=https://api.github.com
 API_HEADER="Accept: application/vnd.github.v3+json"
 AUTH_HEADER="Authorization: token $GITHUB_TOKEN"
 
-pr_resp=$(curl -X GET -s -H "${AUTH_HEADER}" -H "${API_HEADER}" \
-          "${URI}/repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")
-
-BASE_REPO=$(echo "$pr_resp" | jq -r .base.repo.full_name)
-BASE_BRANCH=$(echo "$pr_resp" | jq -r .base.ref)
+BASE_BRANCH=${BASE_BRANCH}
+HEAD_BRANCH=${HEAD_BRANCH}
 
 USER_LOGIN=$(jq -r ".comment.user.login" "$GITHUB_EVENT_PATH")
 
@@ -35,22 +29,6 @@ USER_EMAIL=$(echo "$user_resp" | jq -r ".email")
 if [[ "$USER_EMAIL" == "null" ]]; then
 	USER_EMAIL="$USER_LOGIN@users.noreply.github.com"
 fi
-
-if [[ "$(echo "$pr_resp" | jq -r .rebaseable)" != "true" ]]; then
-	echo "GitHub doesn't think that the PR is rebaseable!"
-	exit 1
-fi
-
-if [[ -z "$BASE_BRANCH" ]]; then
-	echo "Cannot get base branch information for PR #$PR_NUMBER!"
-	echo "API response: $pr_resp"
-	exit 1
-fi
-
-HEAD_REPO=$(echo "$pr_resp" | jq -r .head.repo.full_name)
-HEAD_BRANCH=$(echo "$pr_resp" | jq -r .head.ref)
-
-echo "Base branch for PR #$PR_NUMBER is $BASE_BRANCH"
 
 USER_TOKEN=${USER_LOGIN}_TOKEN
 COMMITTER_TOKEN=${!USER_TOKEN:-$GITHUB_TOKEN}
